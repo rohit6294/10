@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isDriver() {
+      return isSignedIn() && getUserRole() == "driver";
+    }
+
+    function isHospital() {
+      return isSignedIn() && getUserRole() == "hospital";
+    }
+
+    // ── users/{uid} ───────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isSignedIn() && isOwner(uid);
+      allow create: if isSignedIn() && isOwner(uid);
+      allow update: if isSignedIn() && isOwner(uid);
+    }
+
+    // ── drivers/{uid} ─────────────────────────────────────────────────────────
+    match /drivers/{uid} {
+      // Driver can read/write their own profile
+      allow read, write: if isSignedIn() && isOwner(uid);
+      // Hospitals can read driver profiles (for tracking)
+      allow read: if isHospital();
+    }
+
+    // ── hospitals/{uid} ───────────────────────────────────────────────────────
+    match /hospitals/{uid} {
+      // Hospital can read/write their own profile
+      allow read, write: if isSignedIn() && isOwner(uid);
+      // Drivers can read hospital profiles (for navigation)
+      allow read: if isDriver();
+    }
+
+    // ── rescue_requests/{requestId} ───────────────────────────────────────────
+    match /rescue_requests/{requestId} {
+      // Drivers can read any request (to populate their incoming request screen)
+      allow read: if isDriver();
+
+      // Hospitals can read any request (to populate their incoming ambulance screen)
+      allow read: if isHospital();
+
+      // Driver can update to accept (set assignedDriverId) and update status
+      allow update: if isDriver()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['assignedDriverId', 'status', 'driverAcceptedAt',
+                      'patientPickedUpAt', 'completedAt']);
+
+      // Hospital can update to accept (set assignedHospitalId)
+      allow update: if isHospital()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['assignedHospitalId', 'status', 'hospitalAcceptedAt']);
+
+      // Cloud Functions (server-side) have full access via Admin SDK (bypasses rules)
+    }
+
+    // ── location_updates/{driverId} ───────────────────────────────────────────
+    match /location_updates/{driverId} {
+      // Driver can write their own location
+      allow write: if isSignedIn() && isOwner(driverId);
+
+      // Hospitals and other drivers can read live location for tracking
+      allow read: if isHospital() || isDriver();
+    }
+  }
+}
