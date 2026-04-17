@@ -37,9 +37,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         accuracy: LocationAccuracy.high,
         distanceFilter: 20,
       ),
-    ).listen((pos) {
-      if (mounted) setState(() => _currentPosition = pos);
-    });
+    ).listen(
+      (pos) {
+        if (mounted) setState(() => _currentPosition = pos);
+      },
+      onError: (_) {
+        // Permission not granted yet — user must tap Go Online to trigger permission request
+      },
+    );
   }
 
   @override
@@ -111,7 +116,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              if (mounted) context.go('/auth/login'); // ← fixed route
+              if (!context.mounted) return;
+              context.go('/auth/login');
             },
           ),
         ],
@@ -236,7 +242,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -248,7 +254,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withOpacity(0.12),
+                    color: AppColors.accentBlue.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.drive_eta_rounded,
@@ -297,7 +303,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: (driver.isOnline
                           ? const Color(0xFF16A34A)
                           : AppColors.navy)
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -337,10 +343,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: driver.isOnline
-                          ? Colors.white.withOpacity(0.15)
+                          ? Colors.white.withValues(alpha: 0.15)
                           : AppColors.emergency,
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.4), width: 3),
+                          color: Colors.white.withValues(alpha: 0.4), width: 3),
                     ),
                     child: Icon(
                       driver.isOnline
@@ -395,9 +401,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [

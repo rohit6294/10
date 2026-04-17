@@ -80,7 +80,7 @@ class LocationService {
     var minLat = -90.0, maxLat = 90.0;
     var minLng = -180.0, maxLng = 180.0;
     final result = StringBuffer();
-    var bits = 0, bitsTotal = 0, hashValue = 0;
+    var bits = 0, hashValue = 0;
     var isEven = true;
 
     while (result.length < precision) {
@@ -110,7 +110,6 @@ class LocationService {
         bits = 0;
         hashValue = 0;
       }
-      bitsTotal++;
     }
     return result.toString();
   }

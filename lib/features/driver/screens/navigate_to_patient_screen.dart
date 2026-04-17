@@ -150,7 +150,7 @@ class _NavigateToPatientScreenState extends State<NavigateToPatientScreen> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: AppColors.emergency.withOpacity(0.12),
+                            color: AppColors.emergency.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.person_pin_circle,

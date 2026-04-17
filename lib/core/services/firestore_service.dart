@@ -21,10 +21,13 @@ class FirestoreService {
       .map(DriverModel.fromFirestore);
 
   Future<void> setDriverOnline(String uid, bool isOnline) =>
-      _db.doc(FirestorePaths.driver(uid)).update({
-        'isOnline': isOnline,
-        'isAvailable': isOnline, // when going offline also mark unavailable
-      });
+      _db.doc(FirestorePaths.driver(uid)).set(
+        {
+          'isOnline': isOnline,
+          'isAvailable': isOnline,
+        },
+        SetOptions(merge: true), // create doc if missing, otherwise update
+      );
 
   // ─── Hospital ─────────────────────────────────────────────────────────────
 
@@ -40,7 +43,10 @@ class FirestoreService {
       .map(HospitalModel.fromFirestore);
 
   Future<void> setHospitalActive(String uid, bool isActive) =>
-      _db.doc(FirestorePaths.hospital(uid)).update({'isActive': isActive});
+      _db.doc(FirestorePaths.hospital(uid)).set(
+        {'isActive': isActive},
+        SetOptions(merge: true),
+      );
 
   // ─── Rescue Request ───────────────────────────────────────────────────────
 
@@ -64,7 +70,7 @@ class FirestoreService {
     await _db.runTransaction((tx) async {
       final ref = _db.doc(FirestorePaths.rescueRequest(requestId));
       final snap = await tx.get(ref);
-      final data = snap.data() as Map<String, dynamic>?;
+      final data = snap.data();
       if (data == null || data['assignedDriverId'] != null) return; // Already taken
 
       tx.update(ref, {
@@ -90,7 +96,7 @@ class FirestoreService {
     await _db.runTransaction((tx) async {
       final ref = _db.doc(FirestorePaths.rescueRequest(requestId));
       final snap = await tx.get(ref);
-      final data = snap.data() as Map<String, dynamic>?;
+      final data = snap.data();
       if (data == null || data['assignedHospitalId'] != null) return;
 
       tx.update(ref, {

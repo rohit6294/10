@@ -152,7 +152,7 @@ class _IncomingAmbulanceScreenState extends State<IncomingAmbulanceScreen>
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.2),
+                          color: Colors.amber.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.directions_car_rounded,
@@ -183,9 +183,9 @@ class _IncomingAmbulanceScreenState extends State<IncomingAmbulanceScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                     ),
                     child: Column(
                       children: [

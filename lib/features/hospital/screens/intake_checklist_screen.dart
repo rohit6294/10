@@ -91,7 +91,7 @@ class _IntakeChecklistScreenState extends State<IntakeChecklistScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: item.done
-                          ? AppColors.onlineGreen.withOpacity(0.3)
+                          ? AppColors.onlineGreen.withValues(alpha: 0.3)
                           : const Color(0xFFE2E8F0),
                     ),
                   ),

@@ -19,7 +19,7 @@ class RideCompleteScreen extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: AppColors.onlineGreen.withOpacity(0.12),
+                  color: AppColors.onlineGreen.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check_circle_outline,

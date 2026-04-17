@@ -165,7 +165,7 @@ class _NavigateToHospitalScreenState
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: AppColors.onlineGreen.withOpacity(0.12),
+                              color: AppColors.onlineGreen.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.local_hospital,

@@ -156,7 +156,7 @@ class _IncomingRequestScreenState extends State<IncomingRequestScreen>
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.emergency.withOpacity(0.2),
+                          color: AppColors.emergency.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.emergency_rounded,
@@ -189,9 +189,9 @@ class _IncomingRequestScreenState extends State<IncomingRequestScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                     ),
                     child: Column(
                       children: [

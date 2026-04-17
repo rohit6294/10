@@ -143,7 +143,7 @@ class _TrackAmbulanceScreenState extends State<TrackAmbulanceScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: AppColors.onlineGreen.withOpacity(0.1),
+                            color: AppColors.onlineGreen.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
