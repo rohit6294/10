@@ -23,18 +23,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final _uid = FirebaseAuth.instance.currentUser!.uid;
   bool _loading = false;
 
-  // Request IDs already shown — prevents re-navigating after decline
   final _dismissedRequestIds = <String>{};
   bool _navigating = false;
 
-  // Live GPS position (updated continuously while screen is open)
   Position? _currentPosition;
   StreamSubscription<Position>? _gpsSub;
 
   @override
   void initState() {
     super.initState();
-    // Start listening to GPS so distance filtering always has a fresh location
     _gpsSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -57,15 +54,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     super.dispose();
   }
 
-  /// Called on every stream emission. Navigates to the first nearby,
-  /// non-dismissed pending request.
   void _handlePendingRequests(List<RescueRequestModel> requests) {
     if (_navigating) return;
 
     for (final req in requests) {
       if (_dismissedRequestIds.contains(req.requestId)) continue;
 
-      // If we have a live GPS fix, filter by distance; otherwise show all
       if (_currentPosition != null) {
         final dist = LocationService.distanceKm(
           _currentPosition!.latitude,
@@ -73,7 +67,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           req.patientLocation.latitude,
           req.patientLocation.longitude,
         );
-        if (dist > 10) continue; // Skip if beyond 10km
+        if (dist > 10) continue;
       }
 
       _dismissedRequestIds.add(req.requestId);
@@ -87,7 +81,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   Future<void> _toggleOnline(bool currentlyOnline) async {
     if (!currentlyOnline) {
-      // Going online — request permissions first
       final granted = await _locationService.requestPermissions();
       if (!granted && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +111,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              if (mounted) context.go('/auth/role');
+              if (mounted) context.go('/auth/login'); // ← fixed route
             },
           ),
         ],
@@ -128,15 +121,40 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         child: StreamBuilder<DriverModel>(
           stream: _firestoreService.watchDriver(_uid),
           builder: (context, snapshot) {
+            // Show meaningful error instead of spinning forever
+            if (snapshot.hasError) {
+              final err = snapshot.error.toString();
+              final isPermission = err.contains('permission-denied') ||
+                  err.contains('PERMISSION_DENIED');
+              return _buildErrorState(
+                icon: isPermission
+                    ? Icons.lock_outline_rounded
+                    : Icons.cloud_off_rounded,
+                title: isPermission
+                    ? 'Database Access Denied'
+                    : 'Database Not Set Up',
+                message: isPermission
+                    ? 'Firestore security rules are blocking access.\nAsk admin to set rules to Test mode.'
+                    : 'Firestore database is not created yet.\nGo to Firebase Console → Firestore Database → Create database.',
+              );
+            }
+
             if (!snapshot.hasData) {
               return const Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.emergency));
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: AppColors.emergency),
+                    SizedBox(height: 16),
+                    Text('Loading your profile...',
+                        style: TextStyle(color: AppColors.textSecondary)),
+                  ],
+                ),
+              );
             }
+
             final driver = snapshot.data!;
 
-            // When online + available, watch pending requests via Firestore
-            // (replaces FCM — works on free Spark plan)
             return StreamBuilder<List<RescueRequestModel>>(
               stream: (driver.isOnline && driver.isAvailable)
                   ? _firestoreService.watchPendingDriverRequests()
@@ -149,6 +167,56 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.emergency, size: 56),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                color: AppColors.navy,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 14, height: 1.6),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (mounted) context.go('/auth/login');
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign Out'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.emergency,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -192,7 +260,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        driver.name,
+                        driver.name.isEmpty ? 'Driver' : driver.name,
                         style: const TextStyle(
                           color: AppColors.navy,
                           fontSize: 18,
@@ -200,7 +268,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         ),
                       ),
                       Text(
-                        driver.vehicleNumber,
+                        driver.vehicleNumber.isEmpty
+                            ? 'Vehicle not set'
+                            : driver.vehicleNumber,
                         style: const TextStyle(
                             color: AppColors.textSecondary, fontSize: 13),
                       ),
@@ -256,8 +326,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   driver.isOnline
                       ? 'Waiting for emergency requests...'
                       : 'Toggle to start receiving requests',
-                  style:
-                      const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 24),
                 GestureDetector(
@@ -307,7 +376,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               icon: Icons.check_circle_outline,
               color: AppColors.onlineGreen,
               title: 'Ready for Requests',
-              subtitle: 'You\'ll get a notification when there\'s a request',
+              subtitle: "You'll be notified when there's an emergency nearby",
             ),
         ],
       ),

@@ -28,7 +28,7 @@ class DriverModel {
   });
 
   factory DriverModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = (doc.data() as Map<String, dynamic>?) ?? {};
     return DriverModel(
       uid: doc.id,
       name: data['name'] ?? '',

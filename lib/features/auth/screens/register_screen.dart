@@ -5,8 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final String role;
-  const RegisterScreen({super.key, required this.role});
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -19,55 +18,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePass = true;
   String? _error;
 
-  // Common fields
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-
-  // Driver fields
   final _vehicleCtrl = TextEditingController();
   final _licenseCtrl = TextEditingController();
-
-  // Hospital fields
-  final _addressCtrl = TextEditingController();
-  final _selectedSpecs = <String>{};
-
-  static const _specializations = [
-    'General', 'Trauma', 'Cardiac', 'Neuro', 'Pediatric', 'Burn', 'ICU',
-  ];
-
-  bool get _isDriver => widget.role == 'driver';
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
     try {
-      if (_isDriver) {
-        await _authService.registerDriver(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
-          name: _nameCtrl.text.trim(),
-          phone: _phoneCtrl.text.trim(),
-          vehicleNumber: _vehicleCtrl.text.trim(),
-          licenseNumber: _licenseCtrl.text.trim(),
-        );
-        if (!mounted) return;
-        context.go('/driver/home');
-      } else {
-        await _authService.registerHospital(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
-          name: _nameCtrl.text.trim(),
-          phone: _phoneCtrl.text.trim(),
-          address: _addressCtrl.text.trim(),
-          specializations: _selectedSpecs.toList(),
-        );
-        if (!mounted) return;
-        context.go('/hospital/home');
-      }
+      await _authService.registerDriver(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+        name: _nameCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
+        vehicleNumber: _vehicleCtrl.text.trim(),
+        licenseNumber: _licenseCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      context.go('/driver/home');
     } catch (e) {
-      setState(() => _error = 'Registration failed: ${e.toString().split(']').last.trim()}');
+      final msg = e.toString();
+      setState(() => _error = msg.contains('email-already-in-use')
+          ? 'Email already registered. Please login.'
+          : 'Registration failed. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -76,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     for (final c in [_nameCtrl, _emailCtrl, _phoneCtrl, _passCtrl,
-        _vehicleCtrl, _licenseCtrl, _addressCtrl]) {
+        _vehicleCtrl, _licenseCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -89,10 +65,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Scaffold(
         backgroundColor: AppColors.lightBg,
         appBar: AppBar(
-          title: Text(_isDriver ? 'Driver Registration' : 'Hospital Registration'),
+          title: const Text('Driver Registration'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/auth/login/${widget.role}'),
+            onPressed: () => context.go('/auth/login'),
           ),
         ),
         body: SingleChildScrollView(
@@ -102,8 +78,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _field(_nameCtrl, _isDriver ? 'Full Name' : 'Hospital Name',
-                    Icons.person_outline),
+                const SizedBox(height: 8),
+                const Text(
+                  'Create your driver account',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 14),
+                ),
+                const SizedBox(height: 24),
+
+                // Personal info
+                _field(_nameCtrl, 'Full Name', Icons.person_outline),
                 const SizedBox(height: 12),
                 _field(_emailCtrl, 'Email', Icons.email_outlined,
                     type: TextInputType.emailAddress),
@@ -126,66 +110,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (v) =>
-                      v == null || v.length < 6 ? 'Min 6 characters' : null,
+                      v == null || v.length < 6 ? 'Minimum 6 characters' : null,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                if (_isDriver) ...[
-                  const Text('Vehicle Details',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.navy)),
-                  const SizedBox(height: 12),
-                  _field(_vehicleCtrl, 'Vehicle Number (e.g. WB01AB1234)',
-                      Icons.directions_car_outlined),
-                  const SizedBox(height: 12),
-                  _field(_licenseCtrl, 'Driving License Number',
-                      Icons.badge_outlined),
-                ] else ...[
-                  const Text('Hospital Details',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.navy)),
-                  const SizedBox(height: 12),
-                  _field(_addressCtrl, 'Full Address', Icons.location_on_outlined,
-                      maxLines: 2),
-                  const SizedBox(height: 16),
-                  const Text('Specializations',
-                      style: TextStyle(fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _specializations.map((s) {
-                      final selected = _selectedSpecs.contains(s);
-                      return FilterChip(
-                        label: Text(s),
-                        selected: selected,
-                        onSelected: (v) => setState(() {
-                          if (v) _selectedSpecs.add(s);
-                          else _selectedSpecs.remove(s);
-                        }),
-                        selectedColor: AppColors.accentBlue.withOpacity(0.15),
-                        checkmarkColor: AppColors.accentBlue,
-                      );
-                    }).toList(),
-                  ),
-                ],
+                // Vehicle details
+                const Text(
+                  'Vehicle Details',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.navy),
+                ),
+                const SizedBox(height: 12),
+                _field(_vehicleCtrl, 'Vehicle Number (e.g. WB01AB1234)',
+                    Icons.directions_car_outlined),
+                const SizedBox(height: 12),
+                _field(_licenseCtrl, 'Driving License Number',
+                    Icons.badge_outlined),
 
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.emergency.withOpacity(0.08),
+                      color: AppColors.emergency.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: AppColors.emergency.withOpacity(0.3)),
+                          color: AppColors.emergency.withValues(alpha: 0.3)),
                     ),
-                    child: Text(_error!,
-                        style:
-                            const TextStyle(color: AppColors.emergency)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: AppColors.emergency, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(_error!,
+                              style: const TextStyle(
+                                  color: AppColors.emergency, fontSize: 13)),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
                 const SizedBox(height: 32),
@@ -194,15 +157,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _loading ? null : _register,
-                    child: const Text('Create Account'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.navy,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Create Account',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Center(
                   child: TextButton(
-                    onPressed: () =>
-                        context.go('/auth/login/${widget.role}'),
-                    child: const Text('Already have an account? Login'),
+                    onPressed: () => context.go('/auth/login'),
+                    child: const Text(
+                      'Already have an account? Login',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                 ),
               ],
@@ -218,12 +196,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String label,
     IconData icon, {
     TextInputType type = TextInputType.text,
-    int maxLines = 1,
   }) {
     return TextFormField(
       controller: ctrl,
       keyboardType: type,
-      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),

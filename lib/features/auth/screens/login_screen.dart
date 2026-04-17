@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/models/user_model.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 
 class LoginScreen extends StatefulWidget {
-  final String role;
-  const LoginScreen({super.key, required this.role});
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -22,23 +20,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePass = true;
   String? _error;
 
-  bool get _isDriver => widget.role == 'driver';
-
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
     try {
       await _authService.signIn(_emailCtrl.text.trim(), _passCtrl.text);
       if (!mounted) return;
-      final role = await _authService.getUserRole(
-        _authService.currentUser!.uid,
-      );
-      if (!mounted) return;
-      if (role == UserRole.driver) {
-        context.go('/driver/home');
-      } else {
-        context.go('/hospital/home');
-      }
+      context.go('/driver/home');
     } catch (e) {
       setState(() => _error = _friendlyError(e.toString()));
     } finally {
@@ -70,38 +58,54 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: AppColors.navy,
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () => context.go('/auth/role'),
-                    child: const Icon(Icons.arrow_back, color: Colors.white54),
+                  const SizedBox(height: 48),
+                  // Logo
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.emergency,
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: const Icon(Icons.emergency,
+                            color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        '10Min Rescue',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 40),
-                  Icon(
-                    _isDriver
-                        ? Icons.drive_eta_rounded
-                        : Icons.local_hospital_rounded,
-                    color: AppColors.emergency,
-                    size: 48,
-                  ),
+                  const SizedBox(height: 48),
+
+                  const Icon(Icons.drive_eta_rounded,
+                      color: AppColors.emergency, size: 44),
                   const SizedBox(height: 16),
-                  Text(
-                    _isDriver ? 'Driver Login' : 'Hospital Login',
-                    style: const TextStyle(
+                  const Text(
+                    'Driver Login',
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 30,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   const Text(
-                    'Sign in to your account',
-                    style: TextStyle(color: Colors.white54),
+                    'Sign in to start receiving emergency requests',
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
                   ),
                   const SizedBox(height: 40),
 
@@ -140,22 +144,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
 
                   if (_error != null) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.emergency.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.emergency.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(color: AppColors.emergency),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: AppColors.emergency, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_error!,
+                                style: const TextStyle(
+                                    color: AppColors.emergency, fontSize: 13)),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                   const SizedBox(height: 32),
 
-                  // Sign in button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -170,23 +181,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         'Sign In',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // Register link
                   Center(
                     child: TextButton(
-                      onPressed: () =>
-                          context.go('/auth/register/${widget.role}'),
+                      onPressed: () => context.go('/auth/register'),
                       child: const Text(
-                        'Don\'t have an account? Register',
-                        style: TextStyle(color: Colors.white54),
+                        "Don't have an account? Register as Driver",
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
                       ),
                     ),
                   ),

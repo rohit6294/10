@@ -7,7 +7,8 @@ plugins {
 }
 
 android {
-    namespace = "com.tenminrescue.ten_min_res"
+    // namespace = Kotlin package (must match MainActivity.kt path)
+    namespace = "com.tenminrescue.ten_min_rescue"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,6 +22,7 @@ android {
     }
 
     defaultConfig {
+        // applicationId = Firebase package name (must match google-services.json)
         applicationId = "com.tenminrescue.ten_min_res"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
