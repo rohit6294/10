@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 
@@ -25,8 +26,40 @@ class _SplashScreenState extends State<SplashScreen> {
     if (user == null) {
       context.go('/auth/login');
     } else {
-      // Logged-in driver → go home
-      context.go('/driver/home');
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('drivers')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists) {
+          // No driver document — send to upload docs
+          context.go('/driver/upload-docs');
+          return;
+        }
+
+        final data = (doc.data() as Map<String, dynamic>?) ?? {};
+        final verificationStatus =
+            data['verificationStatus'] as String? ?? 'pending';
+        final documents =
+            (data['documents'] as Map<String, dynamic>?) ?? {};
+
+        if (verificationStatus == 'verified') {
+          context.go('/driver/home');
+        } else if (verificationStatus == 'pending' ||
+            verificationStatus == 'rejected') {
+          if (documents.isEmpty) {
+            context.go('/driver/upload-docs');
+          } else {
+            context.go('/driver/home');
+          }
+        } else {
+          context.go('/driver/home');
+        }
+      } catch (_) {
+        // Firestore failed — navigate home gracefully
+        context.go('/driver/home');
+      }
     }
   }
 

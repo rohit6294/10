@@ -5,6 +5,7 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/driver/screens/driver_home_screen.dart';
+import '../../features/driver/screens/document_upload_screen.dart';
 import '../../features/driver/screens/incoming_request_screen.dart';
 import '../../features/driver/screens/navigate_to_patient_screen.dart';
 import '../../features/driver/screens/patient_picked_up_screen.dart';
@@ -21,7 +22,8 @@ class AppRouter {
       final isLoggedIn = FirebaseAuth.instance.currentUser != null;
       final loc = state.matchedLocation;
       final isAuthRoute = loc == '/splash' ||
-          loc.startsWith('/auth/');
+          loc.startsWith('/auth/') ||
+          loc == '/driver/upload-docs';
       if (!isLoggedIn && !isAuthRoute) return '/auth/login';
       return null;
     },
@@ -42,6 +44,10 @@ class AppRouter {
       ),
 
       // ── Driver ────────────────────────────────────────────────────────────
+      GoRoute(
+        path: '/driver/upload-docs',
+        builder: (_, __) => const DocumentUploadScreen(),
+      ),
       GoRoute(
         path: '/driver/home',
         builder: (_, __) => const DriverHomeScreen(),

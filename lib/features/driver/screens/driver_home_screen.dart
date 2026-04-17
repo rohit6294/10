@@ -161,6 +161,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
             final driver = snapshot.data!;
 
+            // Verification: rejected
+            if (driver.verificationStatus == 'rejected') {
+              return _buildRejectedState(driver);
+            }
+
+            // Verification: pending with docs already submitted
+            if (driver.verificationStatus == 'pending' &&
+                driver.documents.isNotEmpty) {
+              return _buildPendingState();
+            }
+
+            // Verified OR documents is empty (old/legacy user) → normal flow
             return StreamBuilder<List<RescueRequestModel>>(
               stream: (driver.isOnline && driver.isAvailable)
                   ? _firestoreService.watchPendingDriverRequests()
@@ -173,6 +185,164 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRejectedState(DriverModel driver) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.emergency.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cancel_rounded,
+                color: AppColors.emergency,
+                size: 44,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Documents Rejected',
+              style: TextStyle(
+                color: AppColors.navy,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (driver.rejectionReason.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.emergency.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.emergency.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  driver.rejectionReason,
+                  style: const TextStyle(
+                    color: AppColors.emergency,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Text(
+              'Please re-upload your documents with clear, readable photos.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.go('/driver/upload-docs'),
+                icon: const Icon(Icons.upload_file_rounded),
+                label: const Text('Re-upload Documents'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emergency,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (mounted) context.go('/auth/login');
+              },
+              icon: const Icon(Icons.logout, color: AppColors.textSecondary),
+              label: const Text(
+                'Sign Out',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.warningAmber.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.access_time_rounded,
+                color: AppColors.warningAmber,
+                size: 44,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Verification Pending',
+              style: TextStyle(
+                color: AppColors.navy,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Your documents are under review. You\'ll be able to go online once verified.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 15,
+                height: 1.6,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (mounted) context.go('/auth/login');
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign Out'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.navy,
+                side: const BorderSide(color: AppColors.navy),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
         ),
       ),
     );

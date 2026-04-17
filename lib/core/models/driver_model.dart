@@ -12,6 +12,9 @@ class DriverModel {
   final GeoPoint? location;
   final String geohash;
   final String? currentRequestId;
+  final String verificationStatus; // 'pending' | 'verified' | 'rejected'
+  final String rejectionReason;
+  final Map<String, String> documents; // docType → downloadUrl
 
   const DriverModel({
     required this.uid,
@@ -25,6 +28,9 @@ class DriverModel {
     this.location,
     this.geohash = '',
     this.currentRequestId,
+    this.verificationStatus = 'pending',
+    this.rejectionReason = '',
+    this.documents = const {},
   });
 
   factory DriverModel.fromFirestore(DocumentSnapshot doc) {
@@ -41,6 +47,11 @@ class DriverModel {
       location: data['location'] as GeoPoint?,
       geohash: data['geohash'] ?? '',
       currentRequestId: data['currentRequestId'],
+      verificationStatus: data['verificationStatus'] ?? 'pending',
+      rejectionReason: data['rejectionReason'] ?? '',
+      documents: (data['documents'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v.toString())) ??
+          const {},
     );
   }
 
@@ -57,6 +68,9 @@ class DriverModel {
         'geohash': geohash,
         'currentRequestId': currentRequestId,
         'lastLocationUpdate': FieldValue.serverTimestamp(),
+        'verificationStatus': verificationStatus,
+        'rejectionReason': rejectionReason,
+        'documents': documents,
       };
 
   DriverModel copyWith({
@@ -66,6 +80,9 @@ class DriverModel {
     String? geohash,
     String? currentRequestId,
     String? fcmToken,
+    String? verificationStatus,
+    String? rejectionReason,
+    Map<String, String>? documents,
   }) =>
       DriverModel(
         uid: uid,
@@ -79,5 +96,8 @@ class DriverModel {
         location: location ?? this.location,
         geohash: geohash ?? this.geohash,
         currentRequestId: currentRequestId ?? this.currentRequestId,
+        verificationStatus: verificationStatus ?? this.verificationStatus,
+        rejectionReason: rejectionReason ?? this.rejectionReason,
+        documents: documents ?? this.documents,
       );
 }

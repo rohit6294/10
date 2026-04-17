@@ -45,12 +45,17 @@ class AuthService {
       phone: phone,
       vehicleNumber: vehicleNumber,
       licenseNumber: licenseNumber,
+      verificationStatus: 'pending',
     );
 
     final batch = _db.batch();
     batch.set(_db.doc(FirestorePaths.user(uid)), user.toFirestore());
     batch.set(_db.doc(FirestorePaths.driver(uid)), driver.toFirestore());
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> registerHospital({
