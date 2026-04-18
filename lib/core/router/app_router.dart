@@ -11,6 +11,7 @@ import '../../features/driver/screens/navigate_to_patient_screen.dart';
 import '../../features/driver/screens/patient_picked_up_screen.dart';
 import '../../features/driver/screens/navigate_to_hospital_screen.dart';
 import '../../features/driver/screens/ride_complete_screen.dart';
+import '../../features/driver/screens/sos_active_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -23,7 +24,8 @@ class AppRouter {
       final loc = state.matchedLocation;
       final isAuthRoute = loc == '/splash' ||
           loc.startsWith('/auth/') ||
-          loc == '/driver/upload-docs';
+          loc == '/driver/upload-docs' ||
+          loc.startsWith('/driver/sos/');
       if (!isLoggedIn && !isAuthRoute) return '/auth/login';
       return null;
     },
@@ -79,6 +81,12 @@ class AppRouter {
       GoRoute(
         path: '/driver/ride-complete',
         builder: (_, __) => const RideCompleteScreen(),
+      ),
+      GoRoute(
+        path: '/driver/sos/:sosId',
+        builder: (_, state) => SosActiveScreen(
+          sosId: state.pathParameters['sosId']!,
+        ),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

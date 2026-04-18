@@ -7,6 +7,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/models/driver_model.dart';
 import '../../../core/models/rescue_request_model.dart';
+import '../../../core/models/sos_request_model.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 
@@ -173,15 +174,23 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             }
 
             // Verified OR documents is empty (old/legacy user) → normal flow
-            return StreamBuilder<List<RescueRequestModel>>(
-              stream: (driver.isOnline && driver.isAvailable)
-                  ? _firestoreService.watchPendingDriverRequests()
+            return StreamBuilder<List<SosRequestModel>>(
+              stream: driver.isOnline
+                  ? _firestoreService.watchPendingSosRequests()
                   : const Stream.empty(),
-              builder: (context, reqSnap) {
-                if (reqSnap.hasData && reqSnap.data!.isNotEmpty) {
-                  _handlePendingRequests(reqSnap.data!);
-                }
-                return _buildBody(driver);
+              builder: (context, sosSnap) {
+                final sosList = sosSnap.data ?? [];
+                return StreamBuilder<List<RescueRequestModel>>(
+                  stream: (driver.isOnline && driver.isAvailable)
+                      ? _firestoreService.watchPendingDriverRequests()
+                      : const Stream.empty(),
+                  builder: (context, reqSnap) {
+                    if (reqSnap.hasData && reqSnap.data!.isNotEmpty) {
+                      _handlePendingRequests(reqSnap.data!);
+                    }
+                    return _buildBody(driver, sosList);
+                  },
+                );
               },
             );
           },
@@ -398,12 +407,25 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  Widget _buildBody(DriverModel driver) {
+  Widget _buildBody(DriverModel driver, List<SosRequestModel> sosList) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           const SizedBox(height: 16),
+
+          // ── SOS Alert cards (shown when driver is online) ──────────────────
+          if (sosList.isNotEmpty) ...[
+            ...sosList.map((sos) => _SosAlertCard(
+              sos: sos,
+              driverPos: _currentPosition,
+              onAccept: () async {
+                await _firestoreService.acceptSosRequest(sos.id, _uid);
+                if (mounted) context.go('/driver/sos/${sos.id}');
+              },
+            )),
+            const SizedBox(height: 16),
+          ],
           // Driver Avatar & Name
           Container(
             padding: const EdgeInsets.all(20),
@@ -595,6 +617,175 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             if (onTap != null)
               const Icon(Icons.arrow_forward_ios,
                   color: AppColors.textLight, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── SOS Alert Card ────────────────────────────────────────────────────────────
+
+class _SosAlertCard extends StatefulWidget {
+  final SosRequestModel sos;
+  final Position? driverPos;
+  final VoidCallback onAccept;
+
+  const _SosAlertCard({
+    required this.sos,
+    required this.driverPos,
+    required this.onAccept,
+  });
+
+  @override
+  State<_SosAlertCard> createState() => _SosAlertCardState();
+}
+
+class _SosAlertCardState extends State<_SosAlertCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulse;
+  bool _accepting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  double? get _distKm {
+    if (widget.driverPos == null) return null;
+    return LocationService.distanceKm(
+      widget.driverPos!.latitude,
+      widget.driverPos!.longitude,
+      widget.sos.latitude,
+      widget.sos.longitude,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dist = _distKm;
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, child) => Container(
+        decoration: BoxDecoration(
+          color: Color.lerp(
+            AppColors.emergency.withValues(alpha: 0.08),
+            AppColors.emergency.withValues(alpha: 0.18),
+            _pulse.value,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColors.emergency.withValues(alpha: 0.5 + _pulse.value * 0.3),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.emergency.withValues(alpha: 0.15 + _pulse.value * 0.1),
+              blurRadius: 16,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: child,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.emergency,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.emergency_rounded,
+                      color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '🚨 EMERGENCY SOS',
+                        style: TextStyle(
+                          color: AppColors.emergency,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        'Customer needs immediate help!',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                if (dist != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.emergency.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${dist.toStringAsFixed(1)} km',
+                      style: const TextStyle(
+                        color: AppColors.emergency,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Accept button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _accepting
+                    ? null
+                    : () async {
+                        setState(() => _accepting = true);
+                        widget.onAccept();
+                      },
+                icon: _accepting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: Text(_accepting ? 'Accepting...' : 'Accept & Navigate'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emergency,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/driver_model.dart';
 import '../models/hospital_model.dart';
 import '../models/rescue_request_model.dart';
+import '../models/sos_request_model.dart';
 import '../constants/firestore_paths.dart';
 
 class FirestoreService {
@@ -192,6 +193,54 @@ class FirestoreService {
       .snapshots()
       .map((snap) =>
           snap.docs.map(RescueRequestModel.fromFirestore).toList());
+
+  // ─── SOS Requests (from website /sos page) ───────────────────────────────
+
+  /// Stream all pending SOS requests (status == 'pending')
+  Stream<List<SosRequestModel>> watchPendingSosRequests() => _db
+      .collection('sos_requests')
+      .where('status', isEqualTo: 'pending')
+      .snapshots()
+      .map((snap) =>
+          snap.docs.map(SosRequestModel.fromFirestore).toList());
+
+  /// Driver accepts a SOS request — marks it assigned
+  Future<void> acceptSosRequest(String sosId, String driverId) async {
+    await _db.collection('sos_requests').doc(sosId).update({
+      'status': 'assigned',
+      'driverId': driverId,
+      'assignedAt': FieldValue.serverTimestamp(),
+    });
+    await _db.doc(FirestorePaths.driver(driverId)).set(
+      {'isAvailable': false},
+      SetOptions(merge: true),
+    );
+  }
+
+  /// Driver completes a SOS request
+  Future<void> completeSosRequest(String sosId, String driverId) async {
+    await _db.collection('sos_requests').doc(sosId).update({
+      'status': 'resolved',
+      'resolvedAt': FieldValue.serverTimestamp(),
+    });
+    await _db.doc(FirestorePaths.driver(driverId)).set(
+      {'isAvailable': true},
+      SetOptions(merge: true),
+    );
+  }
+
+  /// Watch the SOS request assigned to this driver
+  Stream<SosRequestModel?> watchAssignedSos(String driverId) => _db
+      .collection('sos_requests')
+      .where('driverId', isEqualTo: driverId)
+      .snapshots()
+      .map((snap) {
+        final active = snap.docs
+            .map(SosRequestModel.fromFirestore)
+            .where((s) => s.status == 'assigned')
+            .toList();
+        return active.isEmpty ? null : active.first;
+      });
 
   /// Create a new rescue request (triggered from the app or website integration)
   Future<String> createRescueRequest({
