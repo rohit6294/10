@@ -51,21 +51,33 @@ class _IncomingRequestScreenState extends State<IncomingRequestScreen>
     setState(() => _accepting = true);
     _countdownTimer?.cancel();
 
-    final won =
-        await _firestoreService.driverAcceptRequest(widget.requestId, _uid);
-    if (!mounted) return;
+    try {
+      final won =
+          await _firestoreService.driverAcceptRequest(widget.requestId, _uid);
+      if (!mounted) return;
 
-    if (won) {
-      context.go('/driver/navigate-patient/${widget.requestId}');
-    } else {
-      // Someone else already accepted
+      if (won) {
+        context.go('/driver/navigate-patient/${widget.requestId}');
+      } else {
+        // Someone else already accepted
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Request already taken by another driver.'),
+            backgroundColor: AppColors.emergency,
+          ),
+        );
+        context.go('/driver/home');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _accepting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Request already taken by another driver.'),
+          content: Text('Network error. Please try again.'),
           backgroundColor: AppColors.emergency,
         ),
       );
-      context.go('/driver/home');
+      _startCountdown(); // restart the countdown so driver can retry
     }
   }
 

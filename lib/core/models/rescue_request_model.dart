@@ -96,7 +96,7 @@ class RescueRequestModel {
       requestId: doc.id,
       patientName: data['patientName'] ?? 'Unknown Patient',
       patientPhone: data['patientPhone'] ?? '',
-      patientLocation: data['patientLocation'] as GeoPoint,
+      patientLocation: data['patientLocation'] as GeoPoint? ?? const GeoPoint(0, 0),
       emergencyType: data['emergencyType'] ?? 'general',
       status: RequestStatusX.fromString(data['status'] ?? 'pending_driver'),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

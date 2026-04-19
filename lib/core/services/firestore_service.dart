@@ -256,7 +256,7 @@ class FirestoreService {
       'patientPhone': patientPhone,
       'patientLocation': patientLocation,
       'emergencyType': emergencyType,
-      'status': 'pending_driver',
+      'status': RequestStatus.pendingDriver.value,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'currentDriverSearchRadius': 1,
